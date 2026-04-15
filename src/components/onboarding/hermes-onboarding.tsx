@@ -440,8 +440,29 @@ export function HermesOnboarding() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!localStorage.getItem(ONBOARDING_KEY)) {
-      setShow(true)
+    if (localStorage.getItem(ONBOARDING_KEY)) return
+
+    let cancelled = false
+    setShow(true)
+
+    void (async () => {
+      try {
+        const res = await fetch('/api/gateway-status')
+        if (!res.ok) return
+        const data = (await res.json()) as GatewayStatusResponse
+        if (cancelled) return
+        setBackendInfo(data)
+        if (data.capabilities?.chatCompletions) {
+          localStorage.setItem(ONBOARDING_KEY, 'true')
+          setShow(false)
+        }
+      } catch {
+        // Keep onboarding visible when auto-detection fails.
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
