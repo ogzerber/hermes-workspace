@@ -128,6 +128,7 @@ function ChatRoute() {
         }
       >
         <ChatScreen
+          key={`${activeFriendlyId}:${forcedSessionKey ?? 'route'}`}
           activeFriendlyId={activeFriendlyId}
           isNewChat={isNewChat}
           forcedSessionKey={forcedSessionKey}

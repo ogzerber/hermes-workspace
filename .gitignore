@@ -87,6 +87,7 @@ debug-export-*.txt
 tmp/
 
 # Task data (local persistence)
+.omc/
 data/
 dist/
 research/

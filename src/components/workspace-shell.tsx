@@ -13,14 +13,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Suspense, lazy } from 'react'
 import type { SessionMeta } from '@/screens/chat/types'
 import type { AuthStatus } from '@/lib/hermes-auth'
 import { cn } from '@/lib/utils'
 import { ConnectionStartupScreen } from '@/components/connection-startup-screen'
 import { ChatSidebar } from '@/screens/chat/components/chat-sidebar'
-import { chatQueryKeys } from '@/screens/chat/chat-queries'
+import { chatQueryKeys, clearHistoryMessages } from '@/screens/chat/chat-queries'
+import { clearAllPendingSends } from '@/screens/chat/pending-send'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { SIDEBAR_TOGGLE_EVENT } from '@/hooks/use-global-shortcuts'
 import { useSwipeNavigation } from '@/hooks/use-swipe-navigation'
@@ -63,6 +64,7 @@ async function fetchSessions(): Promise<SessionsListResponse> {
 
 export function WorkspaceShell() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -168,12 +170,27 @@ export function WorkspaceShell() {
 
   const startNewChat = useCallback(() => {
     setCreatingSession(true)
+
+    clearAllPendingSends()
+    try {
+      window.sessionStorage.removeItem('hermes-draft-new')
+      window.localStorage.setItem('hermes-last-session', 'new')
+    } catch {
+      // Ignore storage cleanup failures.
+    }
+
+    const activeSessionKey = activeFriendlyId?.trim() || ''
+    if (activeSessionKey) {
+      clearHistoryMessages(queryClient, activeSessionKey, activeSessionKey)
+    }
+    clearHistoryMessages(queryClient, 'new', 'new')
+
     navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } }).then(
       () => {
         setCreatingSession(false)
       },
     )
-  }, [navigate])
+  }, [activeFriendlyId, navigate, queryClient])
 
   const handleSelectSession = useCallback(() => {
     // On mobile, collapse sidebar after selecting

@@ -36,6 +36,7 @@ import { ChatEmptyState } from './components/chat-empty-state'
 import { ChatComposer } from './components/chat-composer'
 import { ConnectionStatusMessage } from './components/connection-status-message'
 import {
+  clearAllPendingSends,
   consumePendingSend,
   hasPendingGeneration,
   hasPendingSend,
@@ -2723,6 +2724,14 @@ export function ChatScreen({
           }}
           onNewChat={() => {
             setSessionsOpen(false)
+            clearAllPendingSends()
+            clearHistoryMessages(queryClient, 'new', 'new')
+            try {
+              window.sessionStorage.removeItem('hermes-draft-new')
+              window.localStorage.setItem('hermes-last-session', 'new')
+            } catch {
+              // Ignore storage cleanup failures.
+            }
             void navigate({
               to: '/chat/$sessionKey',
               params: { sessionKey: 'new' },

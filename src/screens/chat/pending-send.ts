@@ -86,14 +86,28 @@ function removePendingSendFromStorageByFriendlyId(friendlyId: string) {
   }
 }
 
+function listPendingStorageKeys() {
+  if (!canUseLocalStorage()) return [] as Array<string>
+
+  const keys: Array<string> = []
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+      if (!key?.startsWith(PENDING_MESSAGE_STORAGE_PREFIX)) continue
+      keys.push(key)
+    }
+  } catch {
+    return []
+  }
+  return keys
+}
+
 export function cleanupExpiredPendingSends() {
   if (!canUseLocalStorage()) return
 
   try {
     const keysToDelete: Array<string> = []
-    for (let index = 0; index < window.localStorage.length; index += 1) {
-      const key = window.localStorage.key(index)
-      if (!key?.startsWith(PENDING_MESSAGE_STORAGE_PREFIX)) continue
+    for (const key of listPendingStorageKeys()) {
       const raw = window.localStorage.getItem(key)
       if (!raw) {
         keysToDelete.push(key)
@@ -109,6 +123,20 @@ export function cleanupExpiredPendingSends() {
       }
     }
     for (const key of keysToDelete) {
+      window.localStorage.removeItem(key)
+    }
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+export function clearAllPendingSends() {
+  pendingSend = null
+  pendingGeneration = false
+
+  if (!canUseLocalStorage()) return
+  try {
+    for (const key of listPendingStorageKeys()) {
       window.localStorage.removeItem(key)
     }
   } catch {
