@@ -108,14 +108,13 @@ export function WorkspaceShell() {
     return -1
   }, [])
 
-  const isClient = typeof window !== 'undefined'
-  // Both SSR and client start with the same value to avoid hydration mismatch.
-  // The ConnectionStartupScreen overlay verifies the real status on mount.
+  // Keep the initial SSR and first client render identical.
+  // ConnectionStartupScreen performs the real connectivity/auth check after mount.
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [connectionVerified, setConnectionVerified] = useState(false)
 
   const authState = {
-    checked: !isClient || connectionVerified,
+    checked: connectionVerified,
     authenticated: authStatus?.authenticated ?? true,
     authRequired: authStatus?.authRequired ?? false,
   }

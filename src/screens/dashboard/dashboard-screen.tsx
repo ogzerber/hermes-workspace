@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -94,6 +94,65 @@ function EnhancedBadge({ label = 'Enhanced API' }: { label?: string }) {
     <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700">
       {label}
     </span>
+  )
+}
+
+function StableResponsiveChart({
+  children,
+  minHeight = 200,
+}: {
+  children: ReactNode
+  minHeight?: number
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) return
+
+    const updateReadyState = () => {
+      const rect = element.getBoundingClientRect()
+      setIsReady(rect.width > 0 && rect.height > 0)
+    }
+
+    updateReadyState()
+
+    if (typeof ResizeObserver === 'undefined') {
+      return undefined
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateReadyState()
+    })
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-[200px] min-h-[200px] w-full min-w-0 -ml-2"
+    >
+      {isReady ? (
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+          minHeight={minHeight}
+        >
+          {children}
+        </ResponsiveContainer>
+      ) : (
+        <div
+          aria-hidden
+          className="h-full w-full rounded-lg bg-[var(--theme-card2)]/40"
+        />
+      )}
+    </div>
   )
 }
 
@@ -243,15 +302,14 @@ function ActivityChart({ sessions }: { sessions: Array<HermesSession> }) {
       accentColor="#6366f1"
       className="h-full"
     >
-      <div className="h-[200px] w-full -ml-2">
-        <ResponsiveContainer width="100%" height="100%">
-          {/* Dual Y-axis: messages (left, larger values) + sessions (right, smaller values).
-              Without this, sessions flatlines at zero because message counts dominate
-              the shared scale. */}
-          <AreaChart
-            data={chartData}
-            margin={{ top: 8, right: 32, left: -16, bottom: 0 }}
-          >
+      <StableResponsiveChart minHeight={200}>
+        {/* Dual Y-axis: messages (left, larger values) + sessions (right, smaller values).
+            Without this, sessions flatlines at zero because message counts dominate
+            the shared scale. */}
+        <AreaChart
+          data={chartData}
+          margin={{ top: 8, right: 32, left: -16, bottom: 0 }}
+        >
             <defs>
               <linearGradient id="g-sessions" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -313,9 +371,8 @@ function ActivityChart({ sessions }: { sessions: Array<HermesSession> }) {
               strokeWidth={2}
               dot={false}
             />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+        </AreaChart>
+      </StableResponsiveChart>
       <div className="flex items-center gap-5 mt-2 text-[10px] text-neutral-500">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-[#6366f1]" />
